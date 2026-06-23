@@ -1,10 +1,8 @@
-version: '3.8'
-
 services:
   neo4j:
     image: neo4j:5.15-community
     environment:
-      NEO4J_AUTH: neo4j/password123
+      NEO4J_AUTH: ${NEO4J_AUTH:-neo4j/password123}
       NEO4J_PLUGINS: '["apoc"]'
       NEO4J_ACCEPT_LICENSE_AGREEMENT: eval
     ports:
@@ -15,22 +13,23 @@ services:
       - ./init_db.sh:/init_db.sh
       - ./setup_graph.cypher:/setup_graph.cypher
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:7474/db/neo4j/query"]
-      interval: 15s
-      timeout: 10s
+      test: ["CMD", "cypher-shell", "-u", "${NEO4J_USER:-neo4j}", "-p", "${NEO4J_PASSWORD:-password123}", "RETURN 1"]
+      interval: 10s
+      timeout: 5s
       retries: 10
+      start_period: 15s
 
   init-db:
     image: neo4j:5.15-community
     environment:
-      NEO4J_AUTH: neo4j/password123
+      NEO4J_AUTH: ${NEO4J_AUTH:-neo4j/password123}
       NEO4J_ACCEPT_LICENSE_AGREEMENT: eval
     depends_on:
       neo4j:
-        condition: service_started
+        condition: service_healthy
     volumes:
       - ./setup_graph.cypher:/setup_graph.cypher
-    command: bash -c "until cypher-shell -u neo4j -p password123 -a neo4j://neo4j:7687 'RETURN 1'; do echo 'Waiting for Neo4j...'; sleep 2; done; cypher-shell -u neo4j -p password123 -a neo4j://neo4j:7687 < /setup_graph.cypher"
+    command: ["cypher-shell", "-u", "${NEO4J_USER:-neo4j}", "-p", "${NEO4J_PASSWORD:-password123}", "-a", "neo4j://neo4j:7687", "-f", "/setup_graph.cypher"]
     networks:
       - default
 
@@ -39,29 +38,39 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     environment:
-      NEO4J_URI: neo4j://neo4j:7687
-      NEO4J_USER: neo4j
-      NEO4J_PASSWORD: password123
-      NODE_ENV: development
+      NEO4J_URI: ${NEO4J_URI:-neo4j://neo4j:7687}
+      NEO4J_USER: ${NEO4J_USER:-neo4j}
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD:-password123}
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: ${PORT:-5000}
     ports:
-      - "5000:5000"
+      - "${PORT:-5000}:${PORT:-5000}"
     depends_on:
       neo4j:
-        condition: service_started
+        condition: service_healthy
     volumes:
       - ./backend:/app
       - /app/node_modules
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:${PORT:-5000}/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:5000}
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:5000
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:5000}
     ports:
-      - "3000:3000"
+      - "3001:3000"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
 
 volumes:
   neo4j_data:

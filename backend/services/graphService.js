@@ -1,4 +1,6 @@
-const { executeRead } = require('../db');
+const { executeRead, executeWrite } = require('../db');
+const fs = require('fs');
+const path = require('path');
 
 const graphService = {
   async getMachines() {
@@ -40,7 +42,7 @@ const graphService = {
     const result = await executeRead(
       `MATCH path = (start:Machine {name: $startNode})-[:CONNECTED_TO*1..5]->(target:Machine)
        RETURN
-         [n in nodes(path) | n.name] as path,
+         [n in nodes(path) | n.name] as nodesPath,
          target.name as target,
          target.criticality as criticality
        ORDER BY length(path) ASC`,
@@ -48,7 +50,7 @@ const graphService = {
     );
 
     return result.records.map(r => ({
-      path: r.get('path'),
+      path: r.get('nodesPath'),
       target: r.get('target'),
       criticality: r.get('criticality')
     }));
@@ -144,6 +146,91 @@ const graphService = {
     return result.records.map(r => ({
       name: r.get('name')
     }));
+  },
+
+  async createNode(label, properties) {
+    if (!label || !properties.name) {
+      throw new Error('Label and Name are required');
+    }
+    const cleanProps = {};
+    Object.keys(properties).forEach(k => {
+      if (properties[k] !== undefined && properties[k] !== '') {
+        if (k === 'score' || k === 'port') {
+          cleanProps[k] = Number(properties[k]);
+        } else {
+          cleanProps[k] = properties[k];
+        }
+      }
+    });
+
+    const propKeys = Object.keys(cleanProps).map(k => `${k}: $${k}`).join(', ');
+    const query = `CREATE (n:${label} {${propKeys}}) RETURN n`;
+    await executeWrite(query, cleanProps);
+    return { success: true };
+  },
+
+  async createRelationship(sourceName, targetName, relType) {
+    if (!sourceName || !targetName || !relType) {
+      throw new Error('Source, Target and Relationship Type are required');
+    }
+    const query = `
+      MATCH (a {name: $sourceName}), (b {name: $targetName})
+      CREATE (a)-[r:${relType}]->(b)
+      RETURN r
+    `;
+    await executeWrite(query, { sourceName, targetName });
+    return { success: true };
+  },
+
+  async resetDatabase() {
+    const cypherPath = path.join(__dirname, '../setup_graph.cypher');
+    const cypherContent = fs.readFileSync(cypherPath, 'utf8');
+    
+    // Split queries by semicolon and filter out empty ones
+    const queries = cypherContent
+      .split(';')
+      .map(q => q.trim())
+      .filter(q => q.length > 0 && !q.startsWith('//'));
+
+    for (const query of queries) {
+      await executeWrite(query);
+    }
+    return { success: true };
+  },
+
+  async runCustomQuery(query) {
+    if (!query || !query.trim()) {
+      throw new Error('Query string is required');
+    }
+    const result = await executeWrite(query);
+    
+    const keys = result.records.length > 0 ? result.records[0].keys : [];
+    const rows = result.records.map(rec => {
+      const row = {};
+      keys.forEach(k => {
+        const val = rec.get(k);
+        if (val && typeof val === 'object') {
+          if (val.labels) {
+            // Format node representation
+            const labelStr = val.labels.join(':');
+            const nameProp = val.properties.name || val.properties.cve || val.properties.cve || '';
+            row[k] = `Node(:${labelStr} {name: "${nameProp}"})`;
+          } else if (val.type) {
+            // Format relationship representation
+            row[k] = `Relationship[:${val.type}]`;
+          } else if (typeof val.toNumber === 'function') {
+            row[k] = val.toNumber();
+          } else {
+            row[k] = JSON.stringify(val);
+          }
+        } else {
+          row[k] = val;
+        }
+      });
+      return row;
+    });
+    
+    return { keys, rows };
   }
 };
 

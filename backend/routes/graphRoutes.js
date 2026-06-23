@@ -86,4 +86,43 @@ router.get('/stats', async (req, res, next) => {
   }
 });
 
+router.post('/nodes', async (req, res, next) => {
+  try {
+    const { label, properties } = req.body;
+    const result = await graphService.createNode(label, properties);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/relationships', async (req, res, next) => {
+  try {
+    const { sourceName, targetName, relationshipType } = req.body;
+    const result = await graphService.createRelationship(sourceName, targetName, relationshipType);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/reset', async (req, res, next) => {
+  try {
+    const result = await graphService.resetDatabase();
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/query', async (req, res, next) => {
+  try {
+    const { query } = req.body;
+    const result = await graphService.runCustomQuery(query);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
 module.exports = router;

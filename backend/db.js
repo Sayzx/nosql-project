@@ -23,7 +23,17 @@ async function executeRead(query, params = {}) {
   }
 }
 
+async function executeWrite(query, params = {}) {
+  const session = driver.session();
+  try {
+    return await session.executeWrite(tx => tx.run(query, params));
+  } finally {
+    await session.close();
+  }
+}
+
 module.exports = {
   driver,
-  executeRead
+  executeRead,
+  executeWrite
 };

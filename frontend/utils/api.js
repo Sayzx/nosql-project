@@ -33,6 +33,36 @@ export const api = {
     const res = await fetch(`${API_URL}/api/graph`);
     return res.json();
   },
+  async createNode(label, properties) {
+    const res = await fetch(`${API_URL}/api/nodes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ label, properties })
+    });
+    return res.json();
+  },
+  async createRelationship(sourceName, targetName, relationshipType) {
+    const res = await fetch(`${API_URL}/api/relationships`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sourceName, targetName, relationshipType })
+    });
+    return res.json();
+  },
+  async resetDatabase() {
+    const res = await fetch(`${API_URL}/api/reset`, {
+      method: 'POST'
+    });
+    return res.json();
+  },
+  async runCustomQuery(query) {
+    const res = await fetch(`${API_URL}/api/query`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query })
+    });
+    return res.json();
+  },
   async fetchAllData() {
     const [stats, machines, paths, vulnerable, resources, users] = await Promise.all([
       this.fetchStats(),
