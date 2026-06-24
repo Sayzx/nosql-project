@@ -186,11 +186,18 @@ const graphService = {
     const cypherPath = path.join(__dirname, '../setup_graph.cypher');
     const cypherContent = fs.readFileSync(cypherPath, 'utf8');
     
-    // Split queries by semicolon and filter out empty ones
+    // Split queries by semicolon, strip comments, and filter out empty ones
     const queries = cypherContent
       .split(';')
-      .map(q => q.trim())
-      .filter(q => q.length > 0 && !q.startsWith('//'));
+      .map(q => {
+        return q
+          .split('\n')
+          .map(line => line.trim())
+          .filter(line => !line.startsWith('//'))
+          .join('\n')
+          .trim();
+      })
+      .filter(q => q.length > 0);
 
     for (const query of queries) {
       await executeWrite(query);

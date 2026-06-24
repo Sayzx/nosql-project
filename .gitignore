@@ -9,6 +9,7 @@ build/
 out/
 .vercel/
 neo4j_data/
+.env
 .vscode/
 .idea/
 *.swp

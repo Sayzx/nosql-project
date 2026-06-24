@@ -10,11 +10,13 @@ export default function UsersView({ users, machines, loading, secureMode }) {
     bob: { role: 'Développeur Senior', dept: 'Ingénierie & Dev', privileges: 'Workstation, SRV-DB Access (Direct)' },
     charlie: { role: 'Administrateur Système', dept: 'IT Operations', privileges: 'Domain Controller (DC-01), NAS-BACKUP' },
     diana: { role: 'RSSI (CISO)', dept: 'Sécurité de l\'Information', privileges: 'Security Audits & Monitoring' },
-    eve: { role: 'Stagiaire RH', dept: 'Ressources Humaines', privileges: 'Limited Workstation Access' }
+    eve: { role: 'Stagiaire RH', dept: 'Ressources Humaines', privileges: 'Limited Workstation Access' },
+    carol: { role: 'Directrice Financière', dept: 'Finance', privileges: 'Workstation, Payroll Access' },
+    david: { role: 'Ingénieur DevOps', dept: 'Ingénierie & Dev', privileges: 'Workstation, SRV-DB Access (Dev)' }
   };
 
   const getUserData = (name) => {
-    const key = name.toLowerCase();
+    const key = (name || '').toLowerCase();
     return userProfiles[key] || { role: 'Collaborateur', dept: 'CyberCorp Staff', privileges: 'Standard Access' };
   };
 
@@ -44,15 +46,16 @@ export default function UsersView({ users, machines, loading, secureMode }) {
             </thead>
             <tbody>
               {users.map((u, i) => {
-                const profile = getUserData(u.name || u);
-                const isHighRisk = u.name.toLowerCase() === 'charlie' || u.name.toLowerCase() === 'bob';
+                const userName = u?.name || u || '';
+                const profile = getUserData(userName);
+                const isHighRisk = userName.toLowerCase() === 'charlie' || userName.toLowerCase() === 'bob';
                 
                 return (
                   <tr key={i} className={isHighRisk && !secureMode ? styles.high : ''}>
                     <td>
                       <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <strong style={{ color: '#ffffff' }}>{(u.name || u).toUpperCase()}</strong>
-                        <span style={{ fontSize: '0.75em', color: 'var(--text-muted)' }}>{(u.name || u).toLowerCase()}@cybercorp.com</span>
+                        <strong style={{ color: '#ffffff' }}>{userName.toUpperCase()}</strong>
+                        <span style={{ fontSize: '0.75em', color: 'var(--text-muted)' }}>{userName.toLowerCase()}@cybercorp.com</span>
                       </div>
                     </td>
                     <td>{profile.role}</td>
@@ -61,9 +64,9 @@ export default function UsersView({ users, machines, loading, secureMode }) {
                     </td>
                     <td>
                       <span style={{ fontSize: '0.8em', fontFamily: 'var(--font-mono)', color: 'var(--cyber-teal)' }}>
-                        {secureMode && u.name.toLowerCase() === 'bob' 
+                        {secureMode && userName.toLowerCase() === 'bob' 
                           ? 'Workstation (SRV-DB access restricted)' 
-                          : secureMode && u.name.toLowerCase() === 'charlie'
+                          : secureMode && userName.toLowerCase() === 'charlie'
                           ? 'DC-01, NAS-BACKUP (MFA Enforced)'
                           : profile.privileges
                         }

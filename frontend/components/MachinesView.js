@@ -4,7 +4,7 @@ import styles from '../styles/Home.module.css';
 export default function MachinesView({ machines, loading, searchQuery, setSearchQuery, secureMode }) {
   const filtered = machines.filter(m =>
     m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    m.type.toLowerCase().includes(searchQuery.toLowerCase())
+    (m.type || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const getScoreColor = (score) => {

@@ -217,6 +217,24 @@ export default function GraphView({ users, loading, secureMode, compromisedEntry
     };
   }, [fullData, visibleRelationships]);
 
+  const handleResumeSim = () => {
+    if (simStep === -1) {
+      setSimStep(0);
+    }
+    setIsPlaying(true);
+  };
+
+  const handleResetSim = () => {
+    setIsPlaying(false);
+    setSimStep(-1);
+    setSimMitigated(false);
+  };
+
+  const handleDeployCountermeasure = () => {
+    setIsPlaying(false);
+    setSimMitigated(true);
+  };
+
   const handleNodeClick = useCallback((node) => {
     setSelectedNode(node);
   }, []);
